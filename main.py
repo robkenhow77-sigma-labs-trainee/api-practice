@@ -1,10 +1,57 @@
-"""Wen scraping app to get the premier league table."""
+"""Web scraping app to get the premier league table."""
 from requests import get
 from bs4 import BeautifulSoup
 import pandas as pd
-from flask import Flask, Response, request, jsonify
+from flask import Flask, render_template
 
 app = Flask(__name__)
+
+TABLE_STYLE = """
+    <style>
+        table {
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table td, table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        table tr:hover {
+            background-color: #ddd;
+        }
+        table th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: #2d8ff7;
+            color: white;
+        }
+    </style>
+    """
+
+H1_STYLE = """
+    <style>
+        h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+    </style>
+    """
+
+H3_STYLE = """
+    <style>
+        h3 {
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+    </style>
+    """
 
 
 def get_table_html(address: str):
@@ -50,7 +97,7 @@ def create_form_dict(data: list[dict]) -> list[dict]:
             result = result.lower().replace('result', '')
 
             if len(result) > 1:
-                if "win" in result.lower():
+                if "win" in result:
                     results.append("win")
                 elif "loss" in result.lower():
                     results.append("loss")
@@ -59,12 +106,12 @@ def create_form_dict(data: list[dict]) -> list[dict]:
 
         form.append({
               "name": team['name'],
-              "game -1": results[-1],
-              "game -2": results[-2],
-              "game -3": results[-3],
-              "game -4": results[-4],
-              "game -5": results[-5],
-              "game -6": results[-6]
+              "most recent game": results[-6],
+              "game -2": results[-5],
+              "game -3": results[-4],
+              "game -4": results[-3],
+              "game -5": results[-2],
+              "game -6": results[-1]
          })
     return form
 
@@ -79,24 +126,30 @@ def create_dataframes() -> tuple[pd.DataFrame]:
 @app.route("/", methods=["GET"])
 def index():
     """Returns an API welcome messsage."""
-    return jsonify({ "message": "Welcome to the Premier league API!" })
+    html = f"""
+        {H1_STYLE}
+        <h1>The Premier league table</h1>
+        {TABLE_STYLE}
+        {table_df.to_html()}
+        """
+    
+    return html
 
 
-@app.route("/table", methods=["GET"])
-def table():
-    return table_df.to_html()
-
-
-@app.route("/team/<team>", methods=["GET"])
+@app.route("/<team>", methods=["GET"])
 def team(team):
-    df = table_df[table_df["name"] == team]
-    return df.to_html(index=False)
+    team_df = table_df[table_df["name"].apply(lambda x: x.lower()) == team.lower()]
+    team_form_df = form_df[form_df["name"].apply(lambda x: x.lower()) == team.lower()]
+    html = f"""
+        {H1_STYLE}
+        {H3_STYLE}
+        <h1>{team_df['name'].values[0]}</h1>
+        <h3>Current table stats:</h3> 
+        {TABLE_STYLE}
+        {team_df.to_html(index=False)}
+        <h3>Current form:</h3>{team_form_df.to_html()}"""
+    return html
 
-
-@app.route("/form/<team>", methods=["GET"])
-def form(team):
-    df = form_df[form_df["name"] == team]
-    return df.to_html(index=False)
 
 if __name__ == "__main__":
     table_df, form_df = create_dataframes()
