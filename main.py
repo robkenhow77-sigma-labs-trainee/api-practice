@@ -25,7 +25,7 @@ def format_table(data: list[str]) -> dict:
     for i in range(0,200,11):
             teams.append({
                 "position": data[i],
-                "team": data[i+1],
+                "name": data[i+1],
                 "played": data[i+2],
                 "won": data[i+3],
                 "drawn": data[i+4],
@@ -42,10 +42,17 @@ def form_dict(data: list[dict]) -> list[dict]:
     form = []
     for team in data:
         results = []
+        print(team['name'])
         for result in team['form'].split(' '):
-            if "w" in result.lower():
-                pass
-
+            result = result.lower().replace('result', '')
+            if len(result) > 1:
+                if "win" in result.lower():
+                    results.append("win")
+                elif "loss" in result.lower():
+                    results.append("loss")
+                else:
+                    results.append('draw')
+        print(results)
         # form.append({
         #       "team":
         #       "game -1":
@@ -59,6 +66,4 @@ def form_dict(data: list[dict]) -> list[dict]:
 if __name__ == "__main__":
     team_data = get_table('https://www.bbc.co.uk/sport/football/premier-league/table')
     teams_dict = format_table(team_data)
-    for team in teams_dict:
-        print(team["form"])
     form_dict(teams_dict)
